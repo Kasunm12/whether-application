@@ -1,5 +1,6 @@
 package com.hasthiya.weatherapplication;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.recyclerview.widget.RecyclerView;
@@ -21,7 +22,18 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.Volley;
 import com.google.android.material.textfield.TextInputEditText;
+import com.squareup.picasso.Picasso;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -90,6 +102,19 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if(requestCode==PERMISSION_CODE){
+            if(grantResults.length>0 && grantResults[0]== PackageManager.PERMISSION_GRANTED){
+                Toast.makeText(this, "Permissions granted...", Toast.LENGTH_SHORT).show();
+            }else{
+                Toast.makeText(this, "Please provide the permission", Toast.LENGTH_SHORT).show();
+                finish();
+            }
+        }
+    }
+
     private String getCityName(double longitude, double latitude){
         String cityName = "Not Found";
         Geocoder gcd = new Geocoder(getBaseContext(), Locale.getDefault());
@@ -115,5 +140,60 @@ public class MainActivity extends AppCompatActivity {
 
     private  void getWeatherInfo(String cityName) {
         String url= "ttp://api.weatherapi.com/v1/forecast.json?key=ddfc6d36ccdd4ff5aef95128220908&q="+ cityName +"&days=1&aqi=yes&alerts=yes";
+        cityNameTV.setText(cityName);
+        RequestQueue requestQueue = Volley.newRequestQueue(MainActivity.this);
+
+        JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.GET, url, null, new Response.Listener<JSONObject>() {
+            @Override
+            public void onResponse(JSONObject response) {
+                loadingPB.setVisibility(View.GONE);
+                homeRL.setVisibility(View.VISIBLE);
+                weatherRVModelArrayList.clear();
+
+                try {
+                    String temperature = response.getJSONObject("current").getString("temp_c");
+                    temperatureTV.setText(temperature+"°C");
+
+                    int isDay = response.getJSONObject("current").getInt("is_day");
+                    String condition = response.getJSONObject("current").getJSONObject("condition").getString("text");
+
+                    String conditionIcon = response.getJSONObject("current").getJSONObject("condition").getString("icon");
+                    Picasso.get().load("http:".concat(conditionIcon)).into(iconIV);
+                    
+                    conditionTV.setText(condition);
+                    if(isDay==1){
+                        Picasso.get().load("https://www.istockphoto.com/photo/silhouette-of-healthy-man-raised-hands-gm1296589233-389967714").into(backIV);
+                    }else{
+                        Picasso.get().load("https://www.istockphoto.com/photo/freedom-chains-that-transform-into-birds-charge-concept-gm1322104312-408167035?utm_source=unsplash&utm_medium=affiliate&utm_campaign=srp_photos_top&utm_content=https%3A%2F%2Funsplash.com%2Fs%2Fphotos%2Ffree&utm_term=free%3A%3A%3A").into(backIV);
+                    }
+
+                    JSONObject forecastObj = response.getJSONObject("forecast");
+                    JSONObject forcastO=forecastObj.getJSONArray("forecastday").getJSONObject(0);
+                    JSONArray hourArray = forcastO.getJSONArray("hour");
+
+                    for(int i=0; i< hourArray.length(); i++){
+                        JSONObject hourObj = hourArray.getJSONObject(i);
+                        String time = hourObj.getString("time");
+                        String temper = hourObj.getString("temp_c");
+                        String img = hourObj.getJSONObject("condition").getString("icon");
+                        String wind = hourObj.getString("wind_kph");
+
+                        weatherRVModelArrayList.add(new WeatherRVModel(time,temper,img,wind));
+                    }
+
+                    weatherRVAdapter.notifyDataSetChanged();
+
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+        }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                Toast.makeText(MainActivity.this,"Please enter valid city name...",Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        requestQueue.add(jsonObjectRequest);
     }
 }

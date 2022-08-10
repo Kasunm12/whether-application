@@ -50,12 +50,14 @@
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/idTILCity"
                 android:layout_width="0dp"
+                style="@style/Widget.MaterialComponents.TabLayout"
                 android:layout_height="wrap_content"
                 android:layout_margin="10dp"
                 android:layout_weight="4.5"
                 android:background="@android:color/transparent"
                 android:hint="Enter City Name"
                 android:padding="5dp"
+                app:boxStrokeColor="@android:color/transparent"
                 android:textColorHint="@color/white"
                 app:hintTextColor="@color/white">
 
